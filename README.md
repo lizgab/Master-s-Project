@@ -2,4 +2,4 @@
 
 Elizabeth Gabriel and Piers Larkman 
 
-Maachine Learning for the Calibratio of Radiotelescopes 
+Machine Learning for the Calibratio of Radiotelescopes 
