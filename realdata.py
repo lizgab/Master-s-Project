@@ -39,6 +39,7 @@ def readfile(filename):
     
     return timestamp, antenna1, antenna2, vis, visuncert, num, flag
 
+#Main
 timestamp, antenna1, antenna2, vis, visuncert, num, flag = readfile('A75_data.dat')
 
 #remove data flagged as true 
