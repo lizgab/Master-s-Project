@@ -5,13 +5,14 @@ Created on Thu Feb  8 13:31:23 2018
 @author: Piers
 """
 import math
+import cmath
 import numpy as np
 import matplotlib.pyplot as plt
 
 #function = np.random.uniform(low=1.0, high=1.0, size=100)
 #initialize an array of all zeros except "Infinity" (TO DO - COULD MAKE IT INFINITY?) at one point
-delta = np.full(200, 0)
-delta[100] = 100
+delta = np.full(100, 0)
+delta[50] = 100
 
 #Show this "Delta function"
 plt.plot(delta, '.')
@@ -20,54 +21,46 @@ plt.show()
 #FT this "Delta function"
 deltaFT = np.fft.rfft(delta) #TO DO - CHECK NORMALIZATION?? Works out upon IFT but worth knowing
 
-"""
-inv = np.fft.irfft(deltaFT)
-plt.plot(inv, '.')
-plt.show()
-"""
-
 #split this FT into real and imag parts
 R = np.real(deltaFT)
 I = np.imag(deltaFT)
 
 #Get Amp and phase info from FT data
-amp = []
-phase = []
+phs = []
+amp = (deltaFT.real**2 + deltaFT.imag**2)**(1/2)
 for i in range (0,len(deltaFT)):
-    amp = np.append(amp, (R[i]**2 + I[i]**2)**(1/2))
-    phase = np.append(phase, math.atan(I[i]/R[i]))
+    phs.append(cmath.phase(deltaFT[i])) #calculate phase
     
-plt.plot(amp, 'x')
-plt.plot(phase, '.')
-plt.show()
+
+#phs = np.array(phs) #TO DO THIS STEP CONVERTS FROM LIST TO ARRAY AND LOOSES PRECISION
+
+#FT the axis to find the frequency centres
+#freq = np.fft.rfftfreq(100)        
+        
+#plt.plot(freq, amp, 'x')
+#plt.plot(freq, phs, '.')
+#plt.show()
 
 #Now add some systematic phase offset to the data
 
-newPhase = []
-phaseMultiplier = 1 #CHANGE ME
-for i in range (0,len(deltaFT)): #TO DO generalise this 50
-    newPhase = np.append(newPhase, phase[i] + (math.pi)*(phaseMultiplier)) #Add pi/3 to all of em
-    #recombine amplitude info and phase info then iFT - solve sim equ for phase and amp recomp
-    #Real Part
-
+phaseMultiplier = 0 #CHANGE ME
+newPhase = phs + (math.pi)*(phaseMultiplier) #Add a multiple of pi
 
 #Recombine into real and imaginary parts
 newR=[]
 newI=[] 
 newDeltaFT=[]
 
-#SUPER IMPORTATNT NOTE - THIS WORKS NOW BECAUSE I DID SOMETHING STRANGE,
-#THIS ALTERNATES THE SIGN OF THE RECONSTRUCTED PHASE AND AMPLITUDE TO PROPERLY
-#RECONSTRUCT THE ORIGINAL FT DATA.
-for j in range (0,len(phase)): #CURRENTLY WORKING ON - This reconstructs with wrong signs
+#RECONSTRUCT THE FT DATA - back into real and imag parts.
+for j in range (0,len(phs)):
 
-    newR = np.append(newR, (amp[j]*math.cos(newPhase[j]))*np.sign(R[j]))
-    newI = np.append(newI, amp[j]*math.sin(newPhase[j]*(-1)*np.sign(I[j])))
-    """
-    newR = np.append(newR, (amp[j]))
-    newI = np.append(newI, amp[j]*newPhase[j])
-        """
-for k in range (0,len(phase)):
+    newR = np.append(newR, amp[j]*math.cos(newPhase[j]))
+    newI = np.append(newI, amp[j]*math.sin(newPhase[j]))
+    
+    #newR = np.append(newR, (amp[j]))
+    #newI = np.append(newI, amp[j]*newPhase[j])
+    
+for k in range (0,len(phs)):
     newDeltaFT = np.append(newDeltaFT, complex(newR[k] , newI[k]))
 
 #IFT the result and get "Delta function" back
@@ -84,8 +77,7 @@ import matplotlib.pyplot as plt
 
 #Import stuff used for delta function!
 import sympy
-from sympy import DiracDelta
-from sympy.abc import x
+from sympy mpy.abc import x
 
 # Test - does the integral act as expected?
 print(sympy.integrate(DiracDelta(x), (x, 0, 5.0))) #(it sortof does...)
@@ -93,5 +85,7 @@ print(sympy.integrate(DiracDelta(x), (x, 0, 5.0))) #(it sortof does...)
 #FT The delta function
 np.fft.fft(DiracDelta(x))
 
+import DiracDelta
+from sy
 """
 
