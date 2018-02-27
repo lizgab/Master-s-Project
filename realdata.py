@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Created on Tue Feb 27 10:47:21 2018
 
@@ -54,9 +55,22 @@ timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_da
 
 #Identify baselines and sort data based on baselines
 baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
+
 #Sort all data into separate baselines and convert into arrays
 sortedBaselines = np.array(sorted(baselines))
-sortedTimestamp = np.array([x for _,x in sorted(zip(baselines,timestamp))])
-sortedPhs = np.array([x for _,x in sorted(zip(baselines,phs))])
+sortedTimestamp = np.array([x for _,x in sorted(zip(baselines,timestamp))]) # TO DO - NOT SORTED RIGHT
+sortedPhs = np.array([x for _,x in sorted(zip(baselines,phs))]) # TO DO - NOT SORTED RIGHT
+
+b1=[]
+t1=[]
+p1=[]
+
 
 #Get each baseline worth of data in separate array
+test, test1 = np.unique(sortedBaselines, return_index=True)
+
+for i in range (0, len(test1) - 1):
+    for j in range (test1[i], test1[i+1]):
+        b1.append(sortedBaselines[i])
+        t1.append(sortedTimestamp[i])
+        p1.append(sortedPhs[i])
