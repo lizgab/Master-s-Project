@@ -52,11 +52,11 @@ def readfile(filename):
 #Main
 timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_data.dat')
 
+#Identify baselines and sort data based on baselines
+baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
+#Sort all data into separate baselines and convert into arrays
+sortedBaselines = np.array(sorted(baselines))
+sortedTimestamp = np.array([x for _,x in sorted(zip(baselines,timestamp))])
+sortedPhs = np.array([x for _,x in sorted(zip(baselines,phs))])
 
-
-
-
-
-
-
-
+#Get each baseline worth of data in separate array
