@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Feb 27 10:47:21 2018
+Created on Thu Mar  1 09:37:51 2018
 
 @author: mtech
 """
 
 import numpy as np
 import cmath
+import matplotlib.pyplot as plt
 
 #function to read in data 
 def readfile(filename):
@@ -50,6 +51,7 @@ def readfile(filename):
     
     return timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs
 
+#********************************************************************************************
 #Main
 timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_data.dat')
 
@@ -58,19 +60,24 @@ baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
 
 #Sort all data into separate baselines and convert into arrays
 sortedBaselines = np.array(sorted(baselines))
-sortedTimestamp = np.array([x for _,x in sorted(zip(baselines,timestamp))]) # TO DO - NOT SORTED RIGHT
-sortedPhs = np.array([x for _,x in sorted(zip(baselines,phs))]) # TO DO - NOT SORTED RIGHT
+sortedTimestamp = np.array([x for _,x in sorted(zip(baselines,timestamp))]) 
+sortedPhs = np.array([x for _,x in sorted(zip(baselines,phs))])
 
-b1=[]
-t1=[]
-p1=[]
+#merge arrays into one to avoid sorting issues 
+mergesort= np.zeros((3,len(sortedBaselines))) #blank array
+mergesort= np.vstack((sortedBaselines,sortedTimestamp,sortedPhs)) #stack them on top of each other
+mergesort= mergesort.T #transpose
 
+#test, test1 = np.unique(sortedBaselines, return_index=True)
+arrays=np.split(mergesort, np.where(np.diff(mergesort[:,0]))[0]+1) #split the arrays by when theres a difference in the baseline number
 
-#Get each baseline worth of data in separate array
-test, test1 = np.unique(sortedBaselines, return_index=True)
-
-for i in range (0, len(test1) - 1):
-    for j in range (test1[i], test1[i+1]):
-        b1.append(sortedBaselines[i])
-        t1.append(sortedTimestamp[i])
-        p1.append(sortedPhs[i])
+#extract needed info from array of arrays 
+t=[]
+p=[]
+a1 = arrays[1]
+for n in range (0,len(a1)):
+    t.append(a1[n,1])
+    p.append(a1[n,2])
+    
+plt.scatter(t,p)
+plt.show()
