@@ -94,6 +94,7 @@ print(gp.log_likelihood(y))
 
 #plot out results 
 x = np.linspace(max(t), 2025, 2010)
+#Use covar matrix to predict means and variances at points with gaps in data
 mu, var = gp.predict(y, x, return_var=True)
 std = np.sqrt(var)
 
