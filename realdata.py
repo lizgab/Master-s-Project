@@ -57,6 +57,7 @@ def readfile(filename):
 timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_data.dat')
 
 #Identify baselines and sort data based on baselines
+#Give each baseline a unique number, based on a mathematical mapping
 baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
 
 #Sort all data into separate baselines and convert into arrays
@@ -70,19 +71,21 @@ mergesort= np.zeros((4,len(sortedBaselines))) #blank array
 mergesort= np.vstack((sortedBaselines,sortedTimestamp,sortedPhs,sortedVis)) #stack them on top of each other
 mergesort= mergesort.T #transpose
 
-#test, test1 = np.unique(sortedBaselines, return_index=True)
+#test, test1 = np.unique(sortedBaselines, return_index=True) #Gives index and unique values
 arrays=np.split(mergesort, np.where(np.diff(mergesort[:,0]))[0]+1) #split the arrays by when theres a difference in the baseline number
 
 #extract needed info from array of arrays 
 t=[]
 p=[]
 v=[]
+#Select a single baseline worth of data TO DO: PLOT ALL GRAPHS IN ONE GO
 a1 = arrays[1]
 for n in range (0,len(a1)):
     t.append(a1[n,1])
     p.append(a1[n,2])
     v.append(a1[n,3])
-    
+
+#Convert to arrays and plot...
 np.array(t)
 np.array(p)
 np.array(v)
