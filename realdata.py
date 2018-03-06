@@ -8,6 +8,7 @@ Created on Thu Mar  1 09:37:51 2018
 import numpy as np
 import cmath
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 #function to read in data 
 def readfile(filename):
@@ -62,10 +63,11 @@ baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
 sortedBaselines = np.array(sorted(baselines))
 sortedTimestamp = np.array([x for _,x in sorted(zip(baselines,timestamp))]) 
 sortedPhs = np.array([x for _,x in sorted(zip(baselines,phs))])
+sortedVis = np.array([x for _,x in sorted(zip(baselines,vis))])
 
 #merge arrays into one to avoid sorting issues 
-mergesort= np.zeros((3,len(sortedBaselines))) #blank array
-mergesort= np.vstack((sortedBaselines,sortedTimestamp,sortedPhs)) #stack them on top of each other
+mergesort= np.zeros((4,len(sortedBaselines))) #blank array
+mergesort= np.vstack((sortedBaselines,sortedTimestamp,sortedPhs,sortedVis)) #stack them on top of each other
 mergesort= mergesort.T #transpose
 
 #test, test1 = np.unique(sortedBaselines, return_index=True)
@@ -74,10 +76,20 @@ arrays=np.split(mergesort, np.where(np.diff(mergesort[:,0]))[0]+1) #split the ar
 #extract needed info from array of arrays 
 t=[]
 p=[]
+v=[]
 a1 = arrays[1]
 for n in range (0,len(a1)):
     t.append(a1[n,1])
     p.append(a1[n,2])
+    v.append(a1[n,3])
+    
+np.array(t)
+np.array(p)
+np.array(v)
     
 plt.scatter(t,p)
 plt.show()
+
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+ax.plot_trisurf(np.real(v), np.imag(v), t)
