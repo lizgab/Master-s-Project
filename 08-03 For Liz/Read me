@@ -1,0 +1,9 @@
+Put the excel and the code in the same folder and run
+It's pretty janky but:
+ 1) it reads in the data from the excel spreadsheet (A reduced version of the full dataset)
+ 2) Calculates some random kernels
+ 3) I've hardcoded in a calculation of where the data should be predicted
+ 4) Calculates mean and sd in large time gap
+ 5) Prints
+ 
+Obviously it's nowere near where it needs to be and still won't work with the full dataset but progress has been made!
