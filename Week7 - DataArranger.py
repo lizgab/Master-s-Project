@@ -34,7 +34,7 @@ def readfile(filename):
         if not line: break #end infinite loop if no more lines
                                    
         items = line.split(',') #split the items in each line by ','
-        
+
         #only take unflagged  
         if any("False" in x for x in items):
             timestamp.append(float(items[0]))
@@ -44,7 +44,7 @@ def readfile(filename):
             visuncert.append(float(items[4]))
             num.append(float(items[5]))
             flag.append(str(items[6])) #flag is a string   
-        
+
                   
     #turn into normal numpy arrays
     timestamp=np.array(timestamp)
@@ -78,25 +78,27 @@ sampleRate = 0.86
 #Call function to read data
 timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_data.dat')
 
+
 #Identify baselines and sort data based on baselines
 #Give each baseline a unique number, based on a mathematical mapping
 baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
+uniqueBaselines = np.unique(baselines)
 
-#Sort all data into separate baselines and convert into arrays
-sortedBaselines = np.array(sorted(baselines))
-sortedTimestamp = np.array([x for _,x in sorted(zip(baselines,timestamp))]) 
-sortedPhs = np.array([x for _,x in sorted(zip(baselines,phs))])
-#sortedVis = np.array([x for _,x in sorted(zip(baselines,vis))])
+#Zip the baselines, phases and times together for sorting
+allThree = np.column_stack((baselines,timestamp, phs))
+# TO DO - I THINK THERE'S A PROBLEM WITH TIMESTAMP ACCURACY
+allThreeSorted = sorted(allThree,key=lambda x: x[0])
 
-#merge arrays into one to avoid sorting issues 
-mergesort= np.zeros((3,len(sortedBaselines))) #blank array
-mergesort= np.vstack((sortedBaselines,sortedTimestamp,sortedPhs)) #stack them on top of each other
-mergesort= mergesort.T #transpose
+for i in range(0,len(baselines)):
+        baselines[i]=allThreeSorted[i][0]
+       # timestamp[i]=allThreeSorted[i][1]
+        phs[i]=allThreeSorted[i][2]
+        
+allThreeSorted = np.column_stack((baselines,timestamp, phs))
+
 
 #split arrays by baseline identifier
-arrays=np.split(mergesort, np.where(np.diff(mergesort[:,0]))[0]+1) #split the arrays by when theres a difference in the baseline number
-
-
+arrays=np.split(allThreeSorted, np.where(np.diff(allThreeSorted[:,0]))[0]+1) #split the arrays by when theres a difference in the baseline number
 
 #**********************************************************************************************************
 #now get data into correct form and export to a data file
@@ -112,7 +114,6 @@ for i in range (0, len(arrays)):
         t.append(a1[n,1]) #fill up time array from 2nd column of array data
         p.append(a1[n,2]) #fill up phase array from 3rd column of array data
     
-
     #Convert to arrays
     t = np.array(t)
     p = np.array(p)
@@ -131,11 +132,12 @@ for i in range (0, len(arrays)):
     pAv = np.array(pAv)
     tAv = np.array(tAv)
     #Uncomment to plot averaged data (Checked to see if it's similar, it is)            
-    """
+
+    #TO DO - THIS PLOTS BEFORE AVERAGING, CURRENTLY
     plt.figure()
-    plt.scatter(tAv,pAv)
+    plt.scatter(t,p)
     plt.show()
-    """
+
 
 
     #Now undo mod 2pi and work out where to put new datapoint estimates (both in one loop for efficiency)
@@ -163,6 +165,7 @@ for i in range (0, len(arrays)):
     plt.show()
     """
     
+    """
     #Output the data in a form to be used by the GP programme
     #Stitch together data arrays and transpose to columns
     data = np.array([tAv, pAv])
@@ -179,7 +182,7 @@ for i in range (0, len(arrays)):
     with open("{}gapdatafile.txt".format(i), 'wb+') as datafile_id:
     #Write the data, formatted and separated by a comma
         np.savetxt(datafile_id, gap, fmt=['%.2f'], delimiter=',')
-
+"""
 
 
 #calculating parameters is now in next code 
