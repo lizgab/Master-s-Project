@@ -1,0 +1,123 @@
+
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Mar  8 15:31:03 2018
+
+@author: mtech
+"""
+
+"""
+This programme (should) takes the raw data, sorts it into baselines, averages for repeated data, 
+undoes the mod 2pi, calculates an array where data needs predicting and prints to a file 
+for use in a george library process
+"""
+
+import numpy as np
+import cmath
+import matplotlib.pyplot as plt
+
+#import george
+#from george import kernels
+
+# import scipy.optimize as op
+
+
+#function to read in data 
+def readfile(filename):
+    #open file
+    filedata = open(filename, 'r')
+    #create blank arrays 
+    timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = ([] for i in range(8))
+    #while not at the end...
+    while True:
+        line = filedata.readline() #read the lines
+        if not line: break #end infinite loop if no more lines
+                                   
+        items = line.split(',') #split the items in each line by ','
+
+        #only take unflagged  
+        if any("False" in x for x in items):
+            timestamp.append(float(items[0]))
+            antenna1.append(float(items[1]))
+            antenna2.append(float(items[2]))
+            vis.append(complex(items[3])) #vis is complex
+            visuncert.append(float(items[4]))
+            num.append(float(items[5]))
+            flag.append(str(items[6])) #flag is a string   
+
+                  
+    #turn into normal numpy arrays
+    timestamp=np.array(timestamp)
+    antenna1=np.array(antenna1)
+    antenna2=np.array(antenna2)
+    vis=np.array(vis)
+    visuncert=np.array(visuncert)
+    num=np.array(num)
+    
+    #calculate phase
+    for i in range (0,len(vis)):
+        phs.append(cmath.phase(vis[i])) #calculate phase
+    #turn from list in nnumpy array 
+    phs=np.array(phs)
+
+    
+    return timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs
+
+#********************************************************************************************
+#Main
+#Call function to read data
+timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_data.dat')
+
+#Assign each baseline a unique number
+baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
+
+timestampReduced = []
+phaseReduced = []
+visReduced = []
+
+for i in range (0,len(timestamp)):
+  if (baselines[i] == baselines[0]):
+      timestampReduced.append(timestamp[i])
+      phaseReduced.append(phs[i])  
+      visReduced.append(vis[i])
+      
+np.array(timestampReduced)
+  
+plt.figure()
+plt.scatter(timestampReduced,phaseReduced)
+plt.show()
+
+for i in range (0,len(antenna1)):
+    if (antenna1[i] == 0 and antenna2[i] == 1):
+        timestampReduced.append(timestamp[i])
+        phaseReduced.append(phs[i])  
+        visReduced.append(vis[i])
+        
+plt.figure()
+plt.scatter(timestampReduced,phaseReduced)
+plt.show()
+
+
+# Averaging might have a problem if the two values are ~-pi and pi
+times = []
+pAv = []
+temp = 0
+times, indicies, inverse, occurences = np.unique(timestampReduced, return_index=True, return_inverse=True, return_counts=True)
+
+"""
+#Identify where values are repeated and average them if they are
+for i in range (0, len(times)):
+    for j in range (indicies[i],len(timestampReduced)):
+        if (times[i] == timestampReduced[j]):
+            temp += phaseReduced[i]
+    pAv.append(temp)
+    temp = 0
+    
+#make pav and tav into numpy arrays
+pAv = np.array(pAv)
+
+plt.figure()
+plt.scatter(times,pAv)
+plt.show()
+
+"""
