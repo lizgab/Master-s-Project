@@ -70,7 +70,8 @@ def readfile(filename):
 
 
 #PARAMETERS TO BE CHANGED:
-
+#CAN CHANGE the i in range 0, len(baselineArrays) on line ~100 to change which baselines to plot data for
+phaseDiff = cmath.pi #value that the difference between two phases has to be equal to for the programme to have considered data to have wrapped-around on itself
     
 #Call function to read data
 timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_data.dat')
@@ -88,16 +89,14 @@ allThreeSorted = sorted(allThree,key=lambda x: x[0])
 #turn into allThreesorted into numpy array
 allThreeSorted = np.array(allThreeSorted)
 
-
 #split arrays by baseline identifier
 baselineArrays=np.split(allThreeSorted, np.where(np.diff(allThreeSorted[:,0]))[0]+1) #split the arrays by when theres a difference in the baseline number
-
 
 
 #**********************************************************************************************************
 #now get data into correct form and export to a data file
 #get an array of the number of baselines
-for i in range (0, len(baselineArrays)):
+for i in range (0, len(baselineArrays)): #set max to len(baselineArrays) to go to end
     #Select a single baseline worth of data for each i in loop
     oneBaselineArray = baselineArrays[i]
     t=[] #create blank arrays for time and phase
@@ -106,10 +105,16 @@ for i in range (0, len(baselineArrays)):
         t.append(oneBaselineArray[n,1]) #fill up time array from 2nd column of this baselines data array
         p.append(oneBaselineArray[n,2]) #fill up phase array from 3rd column of this baselines data array
     
-
     #Convert to numpy arrays
     t = np.array(t)
     p = np.array(p)
+    
+    """
+    #Plot these if you want
+    plt.figure()
+    plt.scatter(t, p)
+    plt.show()
+    """
 
     #Average over values for repeated times
     # Now average over repeated times...
@@ -117,28 +122,47 @@ for i in range (0, len(baselineArrays)):
     #Identify values, location and occurences of each particular timestamp
     times, indicies, inverse, occurences = np.unique(t, return_index=True , return_inverse=True, return_counts=True)    
     phaseAv = []
+    
     #Loop over every unique time
-    for j in range(0,len(times)):
-       temp = 0
-       #If the time is repeated, average over all corresponding values
-       # if occurences[i] != 1:
-       #Find where the inverse value is repeated and average over these elements of the array
-       index = np.asarray(np.where(inverse == inverse[j])) #find values, convert to array
-       #Loop from zero to the number of ocurences
-       for k in range(0,len(index.T)):
-           temp += p[index[0][k]]
-       phaseAv.append(temp/len(index.T))#Phase should be averaged over
-           
-#   #uncomment to plot all figures
-#    plt.figure()
-#    plt.scatter(times, phaseAv)
-#    plt.show()            
+    for k in range(0,len(times)):
+        temp = 0
+        #If the time is repeated, average over all corresponding values
+        # if occurences[i] != 1:
+        #Find where the inverse value is repeated and average over these elements of the array
+        index = np.asarray(np.where(inverse == inverse[k])) #find values, convert to array
+        #Loop from zero to the number of ocurences
+        for j in range(0,len(index.T)):
+            #Check if there has been a wrap-around in the data - if gap between datas is too large (STOPS PHASES AVERAGING TO ROUGHLY ZERO)
+           if (p[index[0][j]] - p[index[0][j-1]] > phaseDiff or - p[index[0][j]] + p[index[0][j-1]] > phaseDiff ):
+               #if wrapped arround then add on 2pi before summing
+               p[index[0][j-1]] = p[index[0][j-1]] + 2*cmath.pi
+               temp += p[index[0][j]]
+           else:
+               #If there is no wraparound in the data sum phase values ready for averaging
+               temp += p[index[0][j]]
+        #Add  averaged phase values to array
+        #if the value has come out as bigger than pi then need to wrap it back around
+        if (temp/len(index.T) > cmath.pi):
+            av = temp/len(index.T) - 2*cmath.pi
+        #If the value is reasonable then calculate average as normal
+        else:
+            av = temp/len(index.T)
+        #Add averages to an array
+        phaseAv.append(av)
 
+           
+   #uncomment to plot all figures
+    plt.figure()
+    plt.scatter(times, phaseAv)
+    plt.show()
+
+   
     #Output the data in a form to be used by the GP programme
     #Stitch together data arrays and transpose to columns
     data = np.array([times, phaseAv])
     data = data.T
 
+    
     #Open a .txt file to write to 
     #format.(i) makes a different file for each baseline thats being looped over
     with open("{}datafile.txt".format(i), 'wb+') as datafile_id:
@@ -200,10 +224,7 @@ for i in range (0, len(baselineArrays)):
 
 #    
 #"""
-#
-#    
 
-#
 
 
 
