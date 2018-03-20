@@ -1,26 +1,12 @@
-
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Mar  8 15:31:03 2018
-
-@author: mtech
-"""
-
 """
 This programme (should) takes the raw data, sorts it into baselines, averages for repeated data, 
-undoes the mod 2pi, calculates an array where data needs predicting and prints to a file 
+It will then ... undo the mod 2pi, calculates an array where data needs predicting and prints to a file 
 for use in a george library process
 """
 
 import numpy as np
 import cmath
 import matplotlib.pyplot as plt
-
-#import george
-#from george import kernels
-
-# import scipy.optimize as op
-
 
 #function to read in data 
 def readfile(filename):
@@ -35,7 +21,7 @@ def readfile(filename):
                                    
         items = line.split(',') #split the items in each line by ','
 
-        #only take unflagged  
+        #only take unflagged and scan number 2 (This is calib scan)
         if any("False" in x for x in items):
             timestamp.append(float(items[0]))
             antenna1.append(float(items[1]))
@@ -71,22 +57,39 @@ timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_da
 #Assign each baseline a unique number
 baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
 
-timestampReduced = []
-phaseReduced = []
-visReduced = []
+#Prep arrays
+timestampBaseline = []
+phaseBaseline = []
+numBaseline = []
 
+#Loop over whole dataset looking for baseline[0] data and store it
 for i in range (0,len(timestamp)):
-  if (baselines[i] == baselines[0]):
-      timestampReduced.append(timestamp[i])
-      phaseReduced.append(phs[i])  
-      visReduced.append(vis[i])
-      
-np.array(timestampReduced)
-  
+  if (baselines[i] == baselines[0] and num[i] == 2): #TO DO - PUT THIS 2 AT THE TOP SOMEWHERE #if the baseline is the same as the first baseline and the scan is number two
+      #populate arrays with baseline data
+      timestampBaseline.append(timestamp[i])
+      phaseBaseline.append(phs[i])  
+      numBaseline.append(num[i])
+
+"""
+#Won't filter out data to just the calibration data
+#Loop over whole dataset looking for baseline[0] data and store it
+for i in range (0,len(timestamp)):
+  if (baselines[i] == baselines[0]): #if the baseline is the same as the first baseline
+      #populate arrays with baseline data
+      timestampBaseline.append(timestamp[i])
+      phaseBaseline.append(phs[i])  
+      numBaseline.append(num[i])
+#Check what the column num does - colour datapoints depending on the value of num
+"""
+
+#plot, for first baseline, phase against time
 plt.figure()
-plt.scatter(timestampReduced,phaseReduced)
+plt.scatter(timestampBaseline,phaseBaseline, c = numBaseline)
 plt.show()
 
+#Does the same as the above block of code, except in a slightly different way
+#Gives same result
+"""
 for i in range (0,len(antenna1)):
     if (antenna1[i] == 0 and antenna2[i] == 1):
         timestampReduced.append(timestamp[i])
@@ -96,28 +99,29 @@ for i in range (0,len(antenna1)):
 plt.figure()
 plt.scatter(timestampReduced,phaseReduced)
 plt.show()
+"""
 
 
+# Now average over repeated times...
 # Averaging might have a problem if the two values are ~-pi and pi
 times = []
 pAv = []
 temp = 0
-times, indicies, inverse, occurences = np.unique(timestampReduced, return_index=True, return_inverse=True, return_counts=True)
+#Identify values, location and occurences of each particular timestamp
+times, indicies, occurences = np.unique(timestampBaseline, return_index=True, return_counts=True)
 
 """
+
 #Identify where values are repeated and average them if they are
+# TO DO: THIS IS CURRENTLY NOT WORKING - FIX!
 for i in range (0, len(times)):
-    for j in range (indicies[i],len(timestampReduced)):
-        if (times[i] == timestampReduced[j]):
-            temp += phaseReduced[i]
-    pAv.append(temp)
-    temp = 0
-    
-#make pav and tav into numpy arrays
-pAv = np.array(pAv)
+    for j in range (indicies[0],len(timestampReduced)):
+        if (times[0] == timestampReduced[j]):
+            temp += phaseReduced[j]
+        pAv.append(temp)
+        temp = 0
 
 plt.figure()
 plt.scatter(times,pAv)
 plt.show()
-
 """
