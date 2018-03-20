@@ -1,146 +1,127 @@
+"""
+This programme (should) takes the raw data, sorts it into baselines, averages for repeated data, 
+It will then ... undo the mod 2pi, calculates an array where data needs predicting and prints to a file 
+for use in a george library process
+"""
+
 import numpy as np
 import cmath
 import matplotlib.pyplot as plt
-import scipy.optimize as op
 
-from xlrd import open_workbook
-
-import george
-from george import kernels
-
-#Get data from files 
-#tav pav and gap
 #function to read in data 
 def readfile(filename):
     #open file
     filedata = open(filename, 'r')
     #create blank arrays 
-    tAv, pAv = ([] for i in range(2))
+    timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = ([] for i in range(8))
     #while not at the end...
     while True:
         line = filedata.readline() #read the lines
         if not line: break #end infinite loop if no more lines
                                    
         items = line.split(',') #split the items in each line by ','
-        
-        tAv.append(float(items[0]))
-        pAv.append(float(items[1]))
-        
-    #turn into normal numpy arrays
-    tAv=np.array(tAv)
-    pAv=np.array(pAv)
-    
-    return tAv, pAv
 
-def gapfile(filename):
-    #open file
-    filedata = open(filename, 'r')
-    #create blank arrays 
-    gap = []
-    #while not at the end...
-    while True:
-        line = filedata.readline() #read the lines
-        if not line: break #end infinite loop if no more lines
-                                   
-        items = line.split(',') #split the items in each line by ','        
-        gap.append(float(items[0]))
+        #only take unflagged and scan number 2 (This is calib scan)
+        if any("False" in x for x in items):
+            timestamp.append(float(items[0]))
+            antenna1.append(float(items[1]))
+            antenna2.append(float(items[2]))
+            vis.append(complex(items[3])) #vis is complex
+            visuncert.append(float(items[4]))
+            num.append(float(items[5]))
+            flag.append(str(items[6])) #flag is a string   
 
-        
+                  
     #turn into normal numpy arrays
-    gap=np.array(gap)
+    timestamp=np.array(timestamp)
+    antenna1=np.array(antenna1)
+    antenna2=np.array(antenna2)
+    vis=np.array(vis)
+    visuncert=np.array(visuncert)
+    num=np.array(num)
     
-    return gap
+    #calculate phase
+    for i in range (0,len(vis)):
+        phs.append(cmath.phase(vis[i])) #calculate phase
+    #turn from list in nnumpy array 
+    phs=np.array(phs)
+
+    
+    return timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs
 
 #********************************************************************************************
 #Main
-#PARAMETERS TO CHANGE 
-baselineNum = 0
-datasetLen = 1000 #can go up to 45932
+#Call function to read data
+timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_data.dat')
 
-#read in data from selected baseline
-tAv, pAv = readfile("{}datafile.txt".format(baselineNum))
-gap = gapfile("{}datafile.txt".format(baselineNum))
-#Convert to arrays
-pAv = np.array(pAv)
-tAv = np.array(tAv)
+#Assign each baseline a unique number
+baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
 
-#cut down data set to a set size 
-pAv = pAv[:datasetLen] #trims array up to set datasetLen
-tAv = tAv[:datasetLen] #https://stackoverflow.com/questions/1534939/how-to-trim-a-list-in-python
+#Prep arrays
+timestampBaseline = []
+phaseBaseline = []
+numBaseline = []
+
+#Loop over whole dataset looking for baseline[0] data and store it
+for i in range (0,len(timestamp)):
+  if (baselines[i] == baselines[0] and num[i] == 2): #TO DO - PUT THIS 2 AT THE TOP SOMEWHERE #if the baseline is the same as the first baseline and the scan is number two
+      #populate arrays with baseline data
+      timestampBaseline.append(timestamp[i])
+      phaseBaseline.append(phs[i])  
+      numBaseline.append(num[i])
+
+"""
+#Won't filter out data to just the calibration data
+#Loop over whole dataset looking for baseline[0] data and store it
+for i in range (0,len(timestamp)):
+  if (baselines[i] == baselines[0]): #if the baseline is the same as the first baseline
+      #populate arrays with baseline data
+      timestampBaseline.append(timestamp[i])
+      phaseBaseline.append(phs[i])  
+      numBaseline.append(num[i])
+#Check what the column num does - colour datapoints depending on the value of num
+"""
+
+#plot, for first baseline, phase against time
+plt.figure()
+plt.scatter(timestampBaseline,phaseBaseline, c = numBaseline)
+plt.show()
+
+#Does the same as the above block of code, except in a slightly different way
+#Gives same result
+"""
+for i in range (0,len(antenna1)):
+    if (antenna1[i] == 0 and antenna2[i] == 1):
+        timestampReduced.append(timestamp[i])
+        phaseReduced.append(phs[i])  
+        visReduced.append(vis[i])
+        
+plt.figure()
+plt.scatter(timestampReduced,phaseReduced)
+plt.show()
+"""
 
 
-##Now fit this data using a Guassian model
-##CALCULATE COVARIANCE MATRIX - Use relevent kernals For now, use two exp kernels
-#
-## Squared exponential kernel, takes into account long term rise
-##k1 = 0.01**2 * kernels.ExpSquaredKernel(metric=10**2)
-##rSquared exponential kernel,
-#k1 = 7**2 * kernels.ExpSquaredKernel(metric=100**2)
-#
-##removed kernel 2 as new data set doesnt show periodicity
-##k2 = 2.4**2 * kernels.ExpSquaredKernel(90**2) * kernels.ExpSine2Kernel(gamma=2/1.3**2, log_period=0.0)
-### rational quadratic kernel for medium term irregularities.
-### h = 0.66; alpha = 0.78; beta = 1.2
-##k3 = 0.66**2 * kernels.RationalQuadraticKernel(log_alpha=np.log(0.78), metric=1.2**2)
-##
-### noise kernel: includes correlated noise & uncorrelated noise
-### h = 0.18; lambda = 1.6; sigma = 0.19
-##k4 = 0.18**2 * kernels.ExpSquaredKernel(1.6**2)
-#
-##combine kernals 
-#kernel = k1 #+ k2  + k3 + k4
-#
-##initiates combines kernels in george library 
-#gp = george.GP(kernel, mean=np.mean(pAv), fit_mean=True)
-#
-##compues covarience matrix - wants an array, not a list
-#gp.compute(tAv)
-#print(gp.log_likelihood(pAv))
-#
-#"""
-##******************************************************************
-##NOW OPTIMISING PARAMETERS 
-##theres an optimising function in the scipy library
-##need to feed in a function to optimise and the gradient of the function
-##the function to optimise is the log liklihood, which is on the george library 
-## Define the objective function (negative log-likelihood in this case).
-#def nll(p):
-#    gp.set_parameter_vector(p)
-#    ll = gp.log_likelihood(pAv, quiet=True)
-#    return -ll if np.isfinite(ll) else 1e25
-## And the gradient of the objective function.
-#def grad_nll(p):
-#    gp.set_parameter_vector(p)
-#    return -gp.grad_log_likelihood(pAv, quiet=True)
-## You need to compute the GP once before starting the optimization.
-#gp.compute(tAv)
-## Print the initial ln-likelihood.
-#print(gp.log_likelihood(pAv))
-## Run the optimization routine.
-##initial parameter estimates
-#p0 = gp.get_parameter_vector()
-##feed into optimisation routine 
-#results = op.minimize(nll, p0, jac=grad_nll, method="L-BFGS-B")
-## Update the kernel and print the final log-likelihood.
-#gp.set_parameter_vector(results.tAv)
-#print(gp.log_likelihood(pAv))
-#print(p0)
-#"""
-#
-##plot results
-##plt.figure()
-#
-##Produce an array which contains time stamps where there should be a datapoint
-##TO DO - CURRENTLY HARD-CODED, NEED TO CHANGE THAT!!
-#gap = np.linspace(tAv[2089], tAv[2090], int((tAv[2090] - tAv[2089])/0.86))
-#
-##Predict the values of mean and variance at the locations where there should be data
-#mu, var = gp.predict(pAv, gap, return_var=True)
-#std = np.sqrt(var)
-#
-##Plot original data and data and mean/var of predicted data
-#plt.figure()
-#plt.scatter(gap, mu , marker = ".", label = "Predicted data")
-#plt.scatter(tAv, pAv, marker = "+", label = "Original data")
-#plt.fill_between(gap, mu+std, mu-std, color="g", alpha=0.5)
-#plt.legend()
+# Now average over repeated times...
+# Averaging might have a problem if the two values are ~-pi and pi
+times = []
+pAv = []
+temp = 0
+#Identify values, location and occurences of each particular timestamp
+times, indicies, occurences = np.unique(timestampBaseline, return_index=True, return_counts=True)
+
+"""
+
+#Identify where values are repeated and average them if they are
+# TO DO: THIS IS CURRENTLY NOT WORKING - FIX!
+for i in range (0, len(times)):
+    for j in range (indicies[0],len(timestampReduced)):
+        if (times[0] == timestampReduced[j]):
+            temp += phaseReduced[j]
+        pAv.append(temp)
+        temp = 0
+
+plt.figure()
+plt.scatter(times,pAv)
+plt.show()
+"""
