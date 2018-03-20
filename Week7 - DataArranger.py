@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 # import scipy.optimize as op
 
 
+
 #function to read in data 
 def readfile(filename):
     #open file
@@ -34,8 +35,9 @@ def readfile(filename):
                                    
         items = line.split(',') #split the items in each line by ','
         
-        #only take unflagged  
-        if any("False" in x for x in items):
+        #only take unflagged data (tagged as false)
+        #also only takes calibration data (when num=2)
+        if any("False" in x for x in items) and (items[5]=='2'):
             timestamp.append(float(items[0]))
             antenna1.append(float(items[1]))
             antenna2.append(float(items[2]))
@@ -53,7 +55,7 @@ def readfile(filename):
     visuncert=np.array(visuncert)
     num=np.array(num)
     
-    
+
     #calculate phase
     for i in range (0,len(vis)):
         phs.append(cmath.phase(vis[i])) #calculate phase
@@ -73,10 +75,10 @@ def readfile(filename):
 #Call function to read data
 timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = readfile('A75_data.dat')
 
+
 #Identify baselines and sort data based on baselines
 #Give each baseline a unique number, based on a mathematical mapping
 baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
-
 
 
 #Zip the baselines, phases and times together for sorting
@@ -110,16 +112,31 @@ for i in range (0, len(baselineArrays)):
     p = np.array(p)
 
     #Average over values for repeated times
-    #FILL IN THIS
-    
-#   #uncomment to plot all figures
-#    plt.figure()
-#    plt.scatter(t,p)
-#    plt.show()            
+    # Now average over repeated times...
+    # Averaging might have a problem if the two values are ~-pi and pi
+    #Identify values, location and occurences of each particular timestamp
+    times, indicies, inverse, occurences = np.unique(t, return_index=True , return_inverse=True, return_counts=True)    
+    phaseAv = []
+    #Loop over every unique time
+    for i in range(0,len(times)):
+       temp = 0
+       #If the time is repeated, average over all corresponding values
+       # if occurences[i] != 1:
+       #Find where the inverse value is repeated and average over these elements of the array
+       index = np.asarray(np.where(inverse == inverse[i])) #find values, convert to array
+       #Loop from zero to the number of ocurences
+       for j in range(0,len(index.T)):
+           temp += p[index[0][j]]
+       phaseAv.append(temp/len(index.T))#Phase should be averaged over
+           
+   #uncomment to plot all figures
+    plt.figure()
+    plt.scatter(times, phaseAv)
+    plt.show()            
 
     #Output the data in a form to be used by the GP programme
     #Stitch together data arrays and transpose to columns
-    data = np.array([t, p])
+    data = np.array([times, phaseAv])
     data = data.T
 
     #Open a .txt file to write to 
