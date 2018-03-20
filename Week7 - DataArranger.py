@@ -118,21 +118,21 @@ for i in range (0, len(baselineArrays)):
     times, indicies, inverse, occurences = np.unique(t, return_index=True , return_inverse=True, return_counts=True)    
     phaseAv = []
     #Loop over every unique time
-    for i in range(0,len(times)):
+    for j in range(0,len(times)):
        temp = 0
        #If the time is repeated, average over all corresponding values
        # if occurences[i] != 1:
        #Find where the inverse value is repeated and average over these elements of the array
-       index = np.asarray(np.where(inverse == inverse[i])) #find values, convert to array
+       index = np.asarray(np.where(inverse == inverse[j])) #find values, convert to array
        #Loop from zero to the number of ocurences
-       for j in range(0,len(index.T)):
-           temp += p[index[0][j]]
+       for k in range(0,len(index.T)):
+           temp += p[index[0][k]]
        phaseAv.append(temp/len(index.T))#Phase should be averaged over
            
-   #uncomment to plot all figures
-    plt.figure()
-    plt.scatter(times, phaseAv)
-    plt.show()            
+#   #uncomment to plot all figures
+#    plt.figure()
+#    plt.scatter(times, phaseAv)
+#    plt.show()            
 
     #Output the data in a form to be used by the GP programme
     #Stitch together data arrays and transpose to columns
