@@ -13,7 +13,7 @@ def readfile(filename):
     #open file
     filedata = open(filename, 'r')
     #create blank arrays 
-    timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs = ([] for i in range(8))
+    timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs, phsErr = ([] for i in range(9))
     #while not at the end...
     while True:
         line = filedata.readline() #read the lines
@@ -27,7 +27,7 @@ def readfile(filename):
             antenna1.append(float(items[1]))
             antenna2.append(float(items[2]))
             vis.append(complex(items[3])) #vis is complex
-            visuncert.append(float(items[4]))
+            #visuncert.append(complex(items[4]+items[4]*j))
             num.append(float(items[5]))
             flag.append(str(items[6])) #flag is a string   
 
@@ -37,17 +37,19 @@ def readfile(filename):
     antenna1=np.array(antenna1)
     antenna2=np.array(antenna2)
     vis=np.array(vis)
-    visuncert=np.array(visuncert)
+   #visuncert=np.array(visuncert)
     num=np.array(num)
     
-    #calculate phase
+    #calculate phase and phsErr
     for i in range (0,len(vis)):
         phs.append(cmath.phase(vis[i])) #calculate phase
+        #phsErr.append(cmath.phase(visuncert[i]))
     #turn from list in nnumpy array 
     phs=np.array(phs)
+    #phsErr=np.array(phsErr)
 
     
-    return timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs
+    return timestamp, antenna1, antenna2, vis, visuncert, num, flag, phs, #phsErr
 
 #********************************************************************************************
 #Main
@@ -60,6 +62,7 @@ baselines = ((antenna1 + antenna2)*(antenna1 + antenna2 +1))/2 + antenna2
 #Prep arrays
 timestampBaseline = []
 phaseBaseline = []
+phaseErrBaseline = []
 numBaseline = []
 
 #Loop over whole dataset looking for baseline[0] data and store it
@@ -69,6 +72,7 @@ for i in range (0,len(timestamp)):
       timestampBaseline.append(timestamp[i])
       phaseBaseline.append(phs[i])  
       numBaseline.append(num[i])
+      #phaseErrBaseline.append(v)
 
 """
 #Won't filter out data to just the calibration data
@@ -87,41 +91,37 @@ plt.figure()
 plt.scatter(timestampBaseline,phaseBaseline, c = numBaseline)
 plt.show()
 
-#Does the same as the above block of code, except in a slightly different way
-#Gives same result
-"""
-for i in range (0,len(antenna1)):
-    if (antenna1[i] == 0 and antenna2[i] == 1):
-        timestampReduced.append(timestamp[i])
-        phaseReduced.append(phs[i])  
-        visReduced.append(vis[i])
-        
-plt.figure()
-plt.scatter(timestampReduced,phaseReduced)
-plt.show()
-"""
-
-
 # Now average over repeated times...
 # Averaging might have a problem if the two values are ~-pi and pi
-times = []
-pAv = []
-temp = 0
 #Identify values, location and occurences of each particular timestamp
-times, indicies, occurences = np.unique(timestampBaseline, return_index=True, return_counts=True)
+times, indicies, inverse, occurences = np.unique(timestampBaseline, return_index=True , return_inverse=True, return_counts=True)
 
-"""
+timeAv = []
+phaseAv = []
 
-#Identify where values are repeated and average them if they are
-# TO DO: THIS IS CURRENTLY NOT WORKING - FIX!
-for i in range (0, len(times)):
-    for j in range (indicies[0],len(timestampReduced)):
-        if (times[0] == timestampReduced[j]):
-            temp += phaseReduced[j]
-        pAv.append(temp)
-        temp = 0
+#Loop over every unique time
+for i in range(0,len(times)):
+   temp = 0
+    #If the time is NOT repeated just add the data to the end of the array
+   """
+    if occurences[i] == 1:
+        #Append the value corresponding to the index
+        timeAv.append(timestampBaseline[indicies[i]])
+        phaseAv.append(phaseBaseline[indicies[i]])
+   """
+   #If the time is repeated, average over all corresponding values
+   # if occurences[i] != 1:
+   #Find where the inverse value is repeated and average over these elements of the array
+   index = np.asarray(np.where(inverse == inverse[i])) #find values, convert to array
+   #Loop from zero to the number of ocurences
+   for j in range(0,len(index.T)):
+       temp += phaseBaseline[index[0][j]]
+   phaseAv.append(temp/len(index.T))#Phase should be averaged over
+
+   
+#Checko  
+#1timesagain, indiciesagain, occurencesagain = np.unique(timeAv, return_index=True, return_counts=True)
 
 plt.figure()
-plt.scatter(times,pAv)
+plt.scatter(times,phaseAv)
 plt.show()
-"""
