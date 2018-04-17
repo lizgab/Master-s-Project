@@ -85,7 +85,7 @@ baselineArrays=np.split(allThreeSorted, np.where(np.diff(allThreeSorted[:,0]))[0
 #**********************************************************************************************************
 #now get data into correct form and export to a data file
 #loop over all possible baselines and select relevent data, can also print to file and plot
-for i in range (0, 3): #set max to len(baselineArrays) to go to end
+for i in range (0, len(baselineArrays)): #set max to len(baselineArrays) to go to end
     #Select a single baseline worth of data for each i in loop
     oneBaselineArray = baselineArrays[i]
     t=[] #create blank arrays for time and visibility
@@ -100,8 +100,8 @@ for i in range (0, 3): #set max to len(baselineArrays) to go to end
     
     #Calculate phase from visibility
     phs = []
-    for i in range (0,len(v)):
-            phs.append((cmath.phase(v[i]))) #calculate phase
+    for j in range (0,len(v)):
+            phs.append((cmath.phase(v[j]))) #calculate phase
     #turn from list into numpy array 
     phs=np.array(phs)
 
@@ -130,8 +130,8 @@ for i in range (0, 3): #set max to len(baselineArrays) to go to end
         
     #Calculate phase from visibility average
     phsAv = []
-    for i in range (0,len(visAv)):
-            phsAv.append((cmath.phase(visAv[i]))) #calculate phase
+    for l in range (0,len(visAv)):
+            phsAv.append((cmath.phase(visAv[l]))) #calculate phase
     #turn from list into numpy array 
     phsAv=np.array(phsAv)
 
@@ -141,19 +141,17 @@ for i in range (0, 3): #set max to len(baselineArrays) to go to end
     plt.show()
     
 
-    """
+
     #Output the data in a form to be used by the GP programme
     #Stitch together data arrays and transpose to columns
-    data = np.array([times, phaseAv])
+    data = np.array([times, phsAv])
     data = data.T
-
     
     #Open a .txt file to write to 
     #format.(i) makes a different file for each baseline thats being looped over
     with open("{}datafile.txt".format(i), 'wb+') as datafile_id:
     #Write the data, formatted and separated by a comma
         np.savetxt(datafile_id, data, fmt=['%.2f','%.2f'], delimiter=',')
-    """
 
 
 
