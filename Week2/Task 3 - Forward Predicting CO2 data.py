@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Spyder Editor
-
-This is a temporary script file.
-#"""
 #Task 3
 #forward predicting Co2 data 
 #useful links 
