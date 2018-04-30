@@ -39,7 +39,7 @@ def readfile(filename):
 baselineNum = 0
 sampleNum = 50 # Number of points to calculate in reduced dataset (only used for plot)
 sampleNumFull = 5000 # Number of points to calculate for full dataset
-numDataPoints = 200 # 4736 is full dataset
+numDataPoints = 190 # 4736 is full dataset
 
 
 #read in data from selected baseline
@@ -57,7 +57,7 @@ pUncertAv = pUncertAvFull[0:numDataPoints]
 k1 = 0.1**2 * kernels.RationalQuadraticKernel(log_alpha = (0.0)**2, metric=(23280)**2)
 #long term periodicity
 k2 = 0.5**2 * kernels.ExpSquaredKernel(3000**2) * kernels.ExpSine2Kernel(gamma=2**2, log_period=0.0)
-# rational quadratic kernel for medium term irregularities.
+# rational quadratic kernel for short term irregularities.
 k3 = 0.7**2 * kernels.RationalQuadraticKernel(log_alpha = (0.0)**2, metric=(1)**2)
 #short term periodicity
 k4 = 0.3**2 * kernels.ExpSquaredKernel(300**2) * kernels.ExpSine2Kernel(gamma=2**2, log_period=0.0)
@@ -67,7 +67,7 @@ kernel = k1 + k2 + k3 + k4
 #initiates combines kernels in george library 
 gp = george.GP(kernel, mean=np.mean(pAv), fit_mean=True)
 
-#compues covarience matrix - wants an array, not a list
+#compues covarience matrix - (wants an array, not a list)
 gp.compute(tAv, pUncertAv)
 print("initial log likelihood before optimization of reduced data set: ")
 print (gp.log_likelihood(pAv))
@@ -146,6 +146,7 @@ print(gp.log_likelihood(pAv))
 #Produce an array which contains time stamps where there should be a datapoint
 x = np.linspace(min(tAv), max(tAv), sampleNum)
 # Plot the data.
+plt.figure()
 plt.errorbar(tAv, pAv, pUncertAv, fmt=".k", capsize=0)
 # Plot 24 posterior samples.
 samples = sampler.flatchain
