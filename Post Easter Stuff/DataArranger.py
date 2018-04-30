@@ -48,7 +48,7 @@ def readfile(filename):
     
 #PARAMETERS TO BE CHANGED:
 GapSpacing = 100 #threshold spacing of the gaps, 
-avNum = 2 #number of data points to average
+avNum = 5 #number of data points to average
     
 #Call function to read data
 timestamp, antenna1, antenna2, vis, visuncert, num, flag = readfile('A75_data.dat')
@@ -72,7 +72,7 @@ baselineArrays=np.split(allFourSorted, np.where(np.diff(allFourSorted[:,0]))[0]+
 #**********************************************************************************************************
 #now get data into correct form and export to a data file
 #loop over all possible baselines and select relevent data, can also print to file and plot
-for i in range (0, 2): #set max to len(baselineArrays) to go to end
+for i in range (0, 1): #set max to len(baselineArrays) to go to end
     #Select a single baseline worth of data for each i in loop
     oneBaselineArray = baselineArrays[i]
     time=[] #create blank arrays for time, visibility and error
@@ -89,19 +89,22 @@ for i in range (0, 2): #set max to len(baselineArrays) to go to end
     visUncert = np.array(visUncert)
     
     # Calculates phase BEFORE average and prints, useful for demo (no errors tho)
-    """
     #Calculate phase from visibility
     phs = []
-    for j in range (0,len(v)):
-            phs.append((cmath.phase(v[j]))) #calculate phase
+    for j in range (0,len(vis)):
+            phs.append((cmath.phase(vis[j]))) #calculate phase
     #turn from list into numpy array 
     phs=np.array(phs)
 
+
     #Plot these if you want - not that these contain two visibility values for some times!
     plt.figure()
-    plt.scatter(t, phs)
+    plt.xlabel('Time', fontsize=18)
+    plt.ylabel('Phase', fontsize=18)
+    plt.xticks([])
+    plt.scatter(time, phs, marker = '+', color = 'black')
     plt.show()
-    """
+
     
     #Average over repeated visibility values - same baseline two peices of data at same time
     #NOTE: AVERAGE AS VISIBILITY TO AVIOID WRAPPING PROBLEM CAUSED BY PHASE BEING CIRCULAR
@@ -126,6 +129,11 @@ for i in range (0, 2): #set max to len(baselineArrays) to go to end
         visAv.append(av)
         visUncertAv.append(avUncert)
         
+    # Update old arrays to be consisten for next part of programme
+    vis = visAv
+    visUncert = visUncertAv
+        
+    """
     #GAP DESIGNATION
     #this section isolates each chunk of data and tells you the final point before the gap in the array labeled blockEnd
     blockEnd = [] 
@@ -137,7 +145,6 @@ for i in range (0, 2): #set max to len(baselineArrays) to go to end
             blockEnd.append(h)
     blockEnd = np.array(blockEnd) #convert to numpy array
     blockEnd = np.insert(blockEnd, 0, 0) #add an initial value of zero (useful in next bit of program)
-    
     
     #AVERAGING EVERY N VALUES
     #this section ensures if integer number of N dont fit into a certain gap, 
@@ -178,26 +185,34 @@ for i in range (0, 2): #set max to len(baselineArrays) to go to end
         visAvReduced.append(new_value_v/avNum) #averages vis
         timesReduced.append(new_value_t/avNum) #averages times
         visUncertReduced.append(new_value_u/avNum)
+        
+    # Update old arrays to be consisten for next part of programme - allows this block to be easily commented out
+    vis = visAvReduced
+    visUncert = visUncertReduced
+    times = timesReduced
+    """
     
     #Calculate phase from visibility average
     phsAv = []
     phsUncertAv = []
-    for l in range (0,len(visAvReduced)):
+    for l in range (0,len(vis)):
             # calculate phase
-            phsAv.append((cmath.phase(visAvReduced[l])))
+            phsAv.append((cmath.phase(vis[l])))
             # Calculate error on phase, (outlined pg 32 of lab book)
-            phsUncertAv.append(visUncertReduced[l].real*pow((visAvReduced[l].real*visAvReduced[l].real + visAvReduced[l].imag*visAvReduced[l].imag),-0.5))
+            phsUncertAv.append(visUncert[l].real*pow((vis[l].real*vis[l].real + vis[l].imag*vis[l].imag),-0.5))
     #turn from list into numpy array
     phsAv=np.array(phsAv)
     phsUncertAv=np.array(phsUncertAv)    
 
     #Plot these if you want - now properly averaged!!!
     plt.figure()
-    #plt.scatter(times, phsAv)
-    plt.errorbar(timesReduced, phsAv, phsUncertAv, fmt='o', ecolor='g')
+    plt.xlabel('Time', fontsize=18)
+    plt.ylabel('Phase', fontsize=18)
+    plt.xticks([])
+    plt.errorbar(times, phsAv, phsUncertAv, fmt='+', color = 'black', ecolor='g')
     plt.show()
     
-
+    """
     #Output the data in a form to be used by the GP programme
     #Stitch together data arrays and transpose to columns
     data = np.array([timesReduced, phsAv, phsUncertAv])
@@ -208,4 +223,4 @@ for i in range (0, 2): #set max to len(baselineArrays) to go to end
     with open("{}datafile.txt".format(i), 'wb+') as datafile_id:
     #Write the data, formatted and separated by a comma
         np.savetxt(datafile_id, data, fmt=['%.2f','%.5f','%.5f'], delimiter=',')
-
+        """
