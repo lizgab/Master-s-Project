@@ -11,6 +11,7 @@ import scipy.optimize as op
 import george
 import emcee # use for error GP optimization
 from george import kernels
+import time
 
 #Get data from files 
 #tav pav and gap
@@ -39,38 +40,29 @@ def readfile(filename):
 baselineNum = 0
 sampleNum = 50 # Number of points to calculate in reduced dataset (only used for plot)
 sampleNumFull = 5000 # Number of points to calculate for full dataset
-numDataPoints = 190 # 4736 is full dataset
+numDataPoints = 200 # How many datapoints in each block 4736 is full dataset
+numOfBlocks = 1 # Number of blocks to plot
 
 
 #read in data from selected baseline
 tAvFull, pAvFull, pUncertAvFull = readfile("{}datafile.txt".format(baselineNum))
 
-#TEST STUFF - REDUCE SIZE OF DATASET FOR USE IN OPTIMIZAION
-tAv = tAvFull[0:numDataPoints]
-pAv = pAvFull[0:numDataPoints]
-pUncertAv = pUncertAvFull[0:numDataPoints]
-
 #Now fit this data using a Guassian model
 #CALCULATE COVARIANCE MATRIX - Use relevent kernals
 
-# Squared exponential kernel, takes into account long term rise
+# Rational Quadratic, long term rises
 k1 = 0.1**2 * kernels.RationalQuadraticKernel(log_alpha = (0.0)**2, metric=(23280)**2)
-#long term periodicity
+# Long term periodicity
 k2 = 0.5**2 * kernels.ExpSquaredKernel(3000**2) * kernels.ExpSine2Kernel(gamma=2**2, log_period=0.0)
-# rational quadratic kernel for short term irregularities.
+# Short term variations
 k3 = 0.7**2 * kernels.RationalQuadraticKernel(log_alpha = (0.0)**2, metric=(1)**2)
-#short term periodicity
+# Short term periodicity
 k4 = 0.3**2 * kernels.ExpSquaredKernel(300**2) * kernels.ExpSine2Kernel(gamma=2**2, log_period=0.0)
 #combine kernels
 kernel = k1 + k2 + k3 + k4
 
-#initiates combines kernels in george library 
-gp = george.GP(kernel, mean=np.mean(pAv), fit_mean=True)
-
-#compues covarience matrix - (wants an array, not a list)
-gp.compute(tAv, pUncertAv)
-print("initial log likelihood before optimization of reduced data set: ")
-print (gp.log_likelihood(pAv))
+#initiates combined kernels in george library 
+gp = george.GP(kernel, mean=np.mean(pAvFull), fit_mean=True)
 
 """
 # -------- WITHOUT ERROR OPTIMIZATION AND PLOT --------- #
@@ -112,49 +104,75 @@ plt.fill_between(x, mu+std, mu-std, color="g", alpha=0.5)
 plt.legend()
 """
 
+start_time = time.time()
+
 # --------------- WITH ERROR OPTIMIZATION AND PLOT --------------
 # TO DO - HOW DOES THIS ALL WORK...?
 # A slightly different optimization - WITH experimental error included in model - assuming possible correlation in noise
-# Define optimization routine
-def lnprob2(p):
-    gp.set_parameter_vector(p)
-    return gp.log_likelihood(pAv, quiet=True) + gp.log_prior()
-
-initial = gp.get_parameter_vector()
-ndim, nwalkers = len(initial), 36
-# Use emcee to do optimization, as opposed to scipy optimization as before
-sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob2)
-
-# print("Running first burn-in...")
-p0 = initial + 1e-8 * np.random.randn(nwalkers, ndim)
-p0, lp, _ = sampler.run_mcmc(p0, 100)
-
-# print("Running second burn-in...")
-p0 = p0[np.argmax(lp)] + 1e-8 * np.random.randn(nwalkers, ndim)
-sampler.reset()
-p0, _, _ = sampler.run_mcmc(p0, 100)
-sampler.reset()
-
-# print("Running production...")
-sampler.run_mcmc(p0, 100);
-
-print("middle log likelihood after optimization of reduced data set: ")
-print(gp.log_likelihood(pAv))
-
-
-# -------- WITH ERROR PLOT --------- #
-#Produce an array which contains time stamps where there should be a datapoint
-x = np.linspace(min(tAv), max(tAv), sampleNum)
-# Plot the data.
+# Calculate GP iteratively, plot all on one figure
 plt.figure()
-plt.errorbar(tAv, pAv, pUncertAv, fmt=".k", capsize=0)
+for k in range (0, numOfBlocks):
+    
+    # Take reducted dataset
+    tAv = tAvFull[numDataPoints*k:numDataPoints*(k+1)]
+    pAv = pAvFull[numDataPoints*k:numDataPoints*(k+1)]
+    pUncertAv = pUncertAvFull[numDataPoints*k:numDataPoints*(k+1)]
+    
+    # Define optimization routine
+    def lnprob2(p):
+        gp.set_parameter_vector(p)
+        return gp.log_likelihood(pAv, quiet=True) + gp.log_prior()
+    
+    # Compute covariance matrix
+    gp.compute(tAv, pUncertAv)
+    print("Initial Log likelihood for block ", k)
+    print (gp.log_likelihood(pAv))
+    
+    #Run optimisation routine
+    initial = gp.get_parameter_vector()
+    ndim, nwalkers = len(initial), 36
+    # Use emcee to do optimization, as opposed to scipy optimization as before
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob2)
+    # print("Running first burn-in...")
+    p0 = initial + 1e-8 * np.random.randn(nwalkers, ndim)
+    p0, lp, _ = sampler.run_mcmc(p0, 100)
+    # print("Running second burn-in...")
+    p0 = p0[np.argmax(lp)] + 1e-8 * np.random.randn(nwalkers, ndim)
+    sampler.reset()
+    p0, _, _ = sampler.run_mcmc(p0, 100)
+    sampler.reset()
+    # print("Running production...")
+    sampler.run_mcmc(p0, 100);
+    # Print new log likelihood
+    print("Final log likelihood for block ", k)
+    print(gp.log_likelihood(pAv))
+
+    # -------- Get GP parameters and Plot this subsection of the data --------- #
+    # Plot the  original data
+    plt.errorbar(tAv, pAv, pUncertAv, fmt=".k", capsize=0)
+    #Produce an array which contains time stamps where there should be a datapoint
+    x = np.linspace(min(tAv), max(tAv), sampleNum)
+    # Predict values at chosen points
+    mu, var = gp.predict(pAv, x, return_var=True)
+    std = np.sqrt(var)
+    # Plot the data.
+    plt.errorbar(tAv, pAv, pUncertAv, fmt=".k", capsize=0, label = "Original data")
+    plt.plot(x, mu)
+    plt.fill_between(x, mu+std, mu-std, color="grey", alpha=0.5)
+
+plt.xlabel('Time', fontsize=20)
+plt.ylabel('Phase', fontsize=20)
+plt.xticks([])
+
+"""
+# Another way to plot...
 # Plot 24 posterior samples.
 samples = sampler.flatchain
 for s in samples[np.random.randint(len(samples), size=24)]:
     gp.set_parameter_vector(s)
     mu = gp.sample_conditional(pAv, x)
     plt.plot(x, mu, color="#4682b4", alpha=0.3)
-             
+"""
 """
 # OPTIMIZATION OF NEXT CHUNK OF DATA
 # GO again, for the next chunk of data
@@ -190,6 +208,7 @@ for s in samples[np.random.randint(len(samples), size=24)]:
     plt.plot(x, mu, color="r", alpha=0.3)
 """
 
+"""
 # GP OF FULL DATA BASED ON OPTIMIZATION OF INITIAL PARAMETERS
 # Given GP run on reduced subset of data - fit the remaining data
 #Produce an array which contains time stamps where there should be a datapoint
@@ -208,3 +227,6 @@ plt.errorbar(tAvFull, pAvFull, pUncertAvFull, fmt=".k", capsize=0, label = "Orig
 plt.plot(x, mu)
 plt.fill_between(x, mu+std, mu-std, color="grey", alpha=0.5)
 plt.legend()
+"""
+
+print("--- %s seconds ---" % (time.time() - start_time) )
